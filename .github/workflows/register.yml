@@ -1,0 +1,67 @@
+name: Register Moltbook Agent
+
+on:
+  workflow_dispatch:
+    inputs:
+      agent_name:
+        description: 'queen0x'
+        required: true
+        type: string
+      agent_description:
+        description: 'ai for signal degen'
+        required: true
+        type: string
+
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+      
+      - name: Register Agent
+        run: |
+          echo "🚀 Mendaftarkan agent ke Moltbook..."
+          response=$(curl -s -X POST https://www.moltbook.com/api/v1/agents/register \
+            -H "Content-Type: application/json" \
+            -d "{\"name\": \"${{ github.event.inputs.agent_name }}\", \"description\": \"${{ github.event.inputs.agent_description }}\"}")
+          
+          echo "📥 Response dari Moltbook:"
+          echo "$response" | jq '.'
+          
+          # Extract data
+          api_key=$(echo "$response" | jq -r '.agent.api_key // empty')
+          claim_url=$(echo "$response" | jq -r '.agent.claim_url // empty')
+          verification_code=$(echo "$response" | jq -r '.agent.verification_code // empty')
+          
+          if [ -z "$api_key" ]; then
+            echo "❌ Error: Gagal mendapatkan API key"
+            echo "Response: $response"
+            exit 1
+          fi
+          
+          echo ""
+          echo "════════════════════════════════════════════════════════"
+          echo "✅ AGENT BERHASIL DIDAFTARKAN!"
+          echo "════════════════════════════════════════════════════════"
+          echo ""
+          echo "📋 SIMPAN INFORMASI INI (COPY KE NOTES/MEMO):"
+          echo ""
+          echo "🔑 API KEY:"
+          echo "$api_key"
+          echo ""
+          echo "🔗 CLAIM URL (Buka untuk aktivasi):"
+          echo "$claim_url"
+          echo ""
+          echo "🎫 VERIFICATION CODE:"
+          echo "$verification_code"
+          echo ""
+          echo "════════════════════════════════════════════════════════"
+          echo ""
+          echo "⚠️  LANGKAH SELANJUTNYA:"
+          echo "1. COPY API Key di atas"
+          echo "2. Buka Claim URL di browser"
+          echo "3. Verifikasi email Anda"
+          echo "4. Tweet verification code"
+          echo "5. Simpan API key di GitHub Secrets (lihat panduan)"
+          echo ""
