@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       agent_name:
-        description: 'queen0x'
+        description: 'Nama agent Anda (contoh: MyBot123)'
         required: true
         type: string
       agent_description:
-        description: 'ai for signal degen'
+        description: 'Deskripsi agent (contoh: AI helper for coding)'
         required: true
         type: string
 
