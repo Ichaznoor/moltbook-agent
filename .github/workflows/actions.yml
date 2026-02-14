@@ -1,4 +1,4 @@
-name: Moltbook Actions
+name: Moltbook Actions Fixed
 
 on:
   workflow_dispatch:
@@ -12,6 +12,10 @@ on:
           - view_feed
           - create_post
           - view_profile
+      submolt:
+        description: 'Submolt (untuk create_post)'
+        required: false
+        default: 'general'
       post_title:
         description: 'Judul post (untuk create_post)'
         required: false
@@ -34,7 +38,6 @@ jobs:
           
           if [ -z "$API_KEY" ]; then
             echo "❌ ERROR: API Key tidak ditemukan!"
-            echo "Silakan simpan API key di GitHub Secrets dengan nama: MOLTBOOK_API_KEY"
             exit 1
           fi
           
@@ -49,27 +52,53 @@ jobs:
           elif [ "$ACTION" == "view_feed" ]; then
             echo "📰 Feed terbaru (10 posts):"
             curl -s "https://www.moltbook.com/api/v1/feed?sort=new&limit=10" \
-              -H "Authorization: Bearer $API_KEY" | \
-              jq '.posts[] | "[\(.submolt)] \(.title) by @\(.author.name) ↑\(.upvotes)"'
+              -H "Authorization: Bearer $API_KEY" | jq '.'
           
           elif [ "$ACTION" == "create_post" ]; then
             TITLE="${{ github.event.inputs.post_title }}"
             CONTENT="${{ github.event.inputs.post_content }}"
+            SUBMOLT="${{ github.event.inputs.submolt }}"
             
             if [ -z "$TITLE" ]; then
               echo "❌ Error: Judul post tidak boleh kosong"
               exit 1
             fi
             
-            echo "✍️  Membuat post baru..."
+            if [ -z "$SUBMOLT" ]; then
+              SUBMOLT="general"
+            fi
+            
+            echo "✍️ Membuat post baru di m/$SUBMOLT..."
             curl -s -X POST https://www.moltbook.com/api/v1/posts \
               -H "Authorization: Bearer $API_KEY" \
               -H "Content-Type: application/json" \
-              -d "{\"submolt\": \"general\", \"title\": \"$TITLE\", \"content\": \"$CONTENT\"}" | jq '.'
+              -d "{\"submolt\": \"$SUBMOLT\", \"title\": \"$TITLE\", \"content\": \"$CONTENT\"}" | jq '.'
           
           elif [ "$ACTION" == "view_profile" ]; then
-            echo "👤 Profile Anda:"
-            curl -s https://www.moltbook.com/api/v1/agents/me \
-              -H "Authorization: Bearer $API_KEY" | \
-              jq '{name, description, karma, followers: .follower_count, following: .following_count, status}'
+            echo "👤 Mengambil profile lengkap..."
+            
+            # Get full response
+            RESPONSE=$(curl -s https://www.moltbook.com/api/v1/agents/me \
+              -H "Authorization: Bearer $API_KEY")
+            
+            echo "📥 Full Response:"
+            echo "$RESPONSE" | jq '.'
+            
+            echo ""
+            echo "📊 Parsed Profile Info:"
+            
+            # Try to parse specific fields
+            NAME=$(echo "$RESPONSE" | jq -r '.agent.name // .name // "N/A"')
+            DESC=$(echo "$RESPONSE" | jq -r '.agent.description // .description // "N/A"')
+            KARMA=$(echo "$RESPONSE" | jq -r '.agent.karma // .karma // "0"')
+            FOLLOWERS=$(echo "$RESPONSE" | jq -r '.agent.follower_count // .follower_count // "0"')
+            FOLLOWING=$(echo "$RESPONSE" | jq -r '.agent.following_count // .following_count // "0"')
+            STATUS=$(echo "$RESPONSE" | jq -r '.agent.status // .status // "N/A"')
+            
+            echo "Name: $NAME"
+            echo "Description: $DESC"
+            echo "Karma: $KARMA"
+            echo "Followers: $FOLLOWERS"
+            echo "Following: $FOLLOWING"
+            echo "Status: $STATUS"
           fi
